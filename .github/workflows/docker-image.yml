@@ -1,0 +1,34 @@
+name: Build & Scan Vote Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  scan_vote:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: voting-vote:test
+      SYSDIG_API_URL: ${{ secrets.SYSDIG_API_URL }}
+      SECURE_API_TOKEN: ${{ secrets.SYSDIG_SECURE_API_TOKEN }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Vote Image
+        run: |
+          docker build -t $IMAGE_NAME ./vote
+
+      - name: Install Sysdig CLI Scanner
+        run: |
+          VERSION=$(curl -fsSL https://download.sysdig.com/scanning/sysdig-cli-scanner/latest_version.txt)
+          curl -fsSL -o sysdig-cli-scanner \
+            https://download.sysdig.com/scanning/bin/sysdig-cli-scanner/${VERSION}/linux/amd64/sysdig-cli-scanner
+          chmod +x sysdig-cli-scanner
+
+      - name: Scan Vote Image
+        run: |
+          ./sysdig-cli-scanner --apiurl "$SYSDIG_API_URL" $IMAGE_NAME
