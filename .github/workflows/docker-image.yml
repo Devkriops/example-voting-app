@@ -1,4 +1,4 @@
-name: Build & Scan Vote Image
+name: Build & Scan (vote, worker, result) - Sysdig CLI
 
 on:
   workflow_dispatch:
@@ -6,21 +6,34 @@ on:
     branches: [ "main" ]
 
 jobs:
-  scan_vote:
+  build_and_scan:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        svc:
+          - name: vote
+            path: ./vote
+          - name: worker
+            path: ./worker
+          - name: result
+            path: ./result
+
     env:
-      IMAGE_NAME: voting-vote:test
+      IMAGE_TAG: latest
       SYSDIG_API_URL: ${{ secrets.SYSDIG_API_URL }}
       SECURE_API_TOKEN: ${{ secrets.SYSDIG_SECURE_API_TOKEN }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Vote Image
+      - name: Build image
         run: |
-          docker build -t $IMAGE_NAME ./vote
+          IMAGE_NAME="voting-${{ matrix.svc.name }}:${IMAGE_TAG}"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          docker build -t "$IMAGE_NAME" "${{ matrix.svc.path }}"
 
       - name: Install Sysdig CLI Scanner
         run: |
@@ -29,6 +42,6 @@ jobs:
             https://download.sysdig.com/scanning/bin/sysdig-cli-scanner/${VERSION}/linux/amd64/sysdig-cli-scanner
           chmod +x sysdig-cli-scanner
 
-      - name: Scan Vote Image
+      - name: Scan image with Sysdig CLI
         run: |
-          ./sysdig-cli-scanner --apiurl "$SYSDIG_API_URL" $IMAGE_NAME
+          ./sysdig-cli-scanner --apiurl "$SYSDIG_API_URL" "$IMAGE_NAME"
