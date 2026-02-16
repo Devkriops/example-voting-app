@@ -17,6 +17,9 @@ spec:
       containers:
       - image: dockersamples/examplevotingapp_vote
         name: vote
+        securityContext:
+          privileged: true
+          runAsUser: 0
         ports:
         - containerPort: 80
           name: vote
