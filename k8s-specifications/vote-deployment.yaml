@@ -4,6 +4,7 @@ metadata:
   labels:
     app: vote
   name: vote
+  namespace: voting
 spec:
   replicas: 1
   selector:
@@ -15,7 +16,7 @@ spec:
         app: vote
     spec:
       containers:
-      - image: dockersamples/examplevotingapp_vote
+      - image: <your-new-image-name> # Make sure to use the image you built with the updated app.py
         name: vote
         securityContext:
           privileged: true
@@ -23,3 +24,12 @@ spec:
         ports:
         - containerPort: 80
           name: vote
+        # --- ADD THIS SECTION ---
+        env:
+        - name: STATSD_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: STATSD_PORT
+          value: "8125"
+        # --- END OF ADDED SECTION ---
