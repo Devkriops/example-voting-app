@@ -28,11 +28,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Authenticate to GCP
+      # 🔐 Authenticate to GCP
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -41,14 +42,14 @@ jobs:
         run: |
           gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
 
-      # Build Image
+      # 🏗 Build Image
       - name: Build image
         run: |
           IMAGE_URI=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$IMAGE_NAME:$IMAGE_TAG
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           docker build -t $IMAGE_URI ./vote
 
-      # Sysdig Scan (non-blocking)
+      # 🛡 Sysdig Scan (non-blocking)
       - name: Install Sysdig CLI Scanner
         run: |
           VERSION=$(curl -fsSL https://download.sysdig.com/scanning/sysdig-cli-scanner/latest_version.txt)
@@ -61,23 +62,22 @@ jobs:
         run: |
           ./sysdig-cli-scanner --apiurl "$SYSDIG_API_URL" "$IMAGE_URI"
 
-      # Push to Artifact Registry
+      # 🚀 Push to Artifact Registry
       - name: Push image
         run: |
           docker push $IMAGE_URI
 
-      # Deploy to GKE
+      # ☸️ Deploy to GKE
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v2
         with:
-          # Use ${{ env.VAR }} here because this is an 'Action' input
           cluster_name: ${{ env.CLUSTER }}
           location: ${{ env.CLUSTER_LOCATION }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Update deployment image
-        # Use standard $VAR here because this is a 'Shell' script
         run: |
+          # Use shell variables ($) here as this is a bash environment
           kubectl -n $NAMESPACE set image deployment/$DEPLOYMENT \
             $DEPLOYMENT=$IMAGE_URI
 
