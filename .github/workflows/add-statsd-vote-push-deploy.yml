@@ -70,11 +70,13 @@ jobs:
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v2
         with:
-          cluster_name: $CLUSTER
-          location: $CLUSTER_LOCATION
-          project_id: $PROJECT_ID
+          # Use ${{ env.VAR }} here because this is an 'Action' input
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.CLUSTER_LOCATION }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Update deployment image
+        # Use standard $VAR here because this is a 'Shell' script
         run: |
           kubectl -n $NAMESPACE set image deployment/$DEPLOYMENT \
             $DEPLOYMENT=$IMAGE_URI
