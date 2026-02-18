@@ -3,7 +3,7 @@ name: Build, Scan, Push & Deploy (vote)
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ["Add-StatsD"]
 
 env:
   PROJECT_ID: sysdig-setup
