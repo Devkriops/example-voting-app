@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, make_response, g
 from redis import Redis
+from statsd import StatsClient  # Added this
 import os
 import socket
 import random
@@ -9,6 +10,13 @@ import logging
 option_a = os.getenv('OPTION_A', "Cats")
 option_b = os.getenv('OPTION_B', "Dogs")
 hostname = socket.gethostname()
+
+# --- STATSD CONFIGURATION START ---
+# We get these from the Kubernetes Downward API (Step 2 in previous chat)
+statsd_host = os.getenv('STATSD_HOST', 'localhost') 
+statsd_port = int(os.getenv('STATSD_PORT', 8125))
+statsd = StatsClient(host=statsd_host, port=statsd_port, prefix='voting_app')
+# --- STATSD CONFIGURATION END ---
 
 app = Flask(__name__)
 
@@ -33,6 +41,13 @@ def hello():
         redis = get_redis()
         vote = request.form['vote']
         app.logger.info('Received vote for %s', vote)
+        
+        # --- STATSD METRIC START ---
+        # This sends the data to Sysdig
+        statsd.incr('votes.total') 
+        statsd.incr(f'votes.{vote.lower()}') # Tracks specific votes for cats/dogs
+        # --- STATSD METRIC END ---
+
         data = json.dumps({'voter_id': voter_id, 'vote': vote})
         redis.rpush('votes', data)
 
@@ -45,7 +60,6 @@ def hello():
     ))
     resp.set_cookie('voter_id', voter_id)
     return resp
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
